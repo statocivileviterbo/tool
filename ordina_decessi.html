@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elaboratore Record Decessi - Parsing Semplice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Container completamente adattivo */
+        .container {
+            width: calc(100% - 40px);
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        /* Sezione input semplificata - solo textarea */
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .textarea-container {
+            width: 100%;
+        }
+
+        .textarea-container label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        /* Textarea perfettamente adattiva con font più piccolo */
+        #contentInput {
+            width: 100%;
+            height: 300px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 0.8rem;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        #contentInput:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Input file nascosto */
+        #fileInput {
+            display: none;
+        }
+
+        /* Sezione pulsanti centralizzata */
+        .buttons-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin: 5px 10px;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-file {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+        }
+
+        .btn-file:hover {
+            box-shadow: 0 5px 15px rgba(23, 162, 184, 0.3);
+        }
+
+        .btn-clear {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .btn-clear:hover {
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .progress-section {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover td {
+            background-color: #f8f9fa;
+        }
+
+        .invalid-row {
+            background-color: #fff5f5 !important;
+            color: #c53030;
+        }
+
+        .invalid-row:hover {
+            background-color: #fed7d7 !important;
+        }
+
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .download-section {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left-color: #ffc107;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Responsività migliorata con margini ridotti su mobile */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+
+            .container {
+                width: calc(100% - 30px);
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            table {
+                font-size: 0.9rem;
+            }
+
+            .btn {
+                margin: 5px;
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+
+            .buttons-section {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                width: calc(100% - 20px);
+            }
+
+            .content {
+                padding: 15px;
+            }
+
+            .header {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 1.6rem;
+            }
+
+            .btn {
+                width: 100%;
+                margin: 5px 0;
+            }
+
+            .buttons-section {
+                display: block;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗂️ Elaboratore Record Decessi</h1>
+            <p>Parsing semplice e robusto con metodi string nativi</p>
+        </div>
+
+        <div class="content">
+            <!-- Sezione input semplificata - solo textarea -->
+            <div class="input-section">
+                <div class="textarea-container">
+                    <label for="contentInput">📝 Incolla qui i record da elaborare:</label>
+                    <textarea id="contentInput" placeholder="Incolla qui il contenuto del file TXT...
+
+Esempio:
+2025 n.150 p.I uff.1 [61077] ANSELMI RENZO nato il 20-11-1924 Data Morte: 11-09-2025 Ore 02:40
+Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12-09-2025 Ore 14:20"></textarea>
+                </div>
+            </div>
+
+            <!-- Sezione pulsanti centralizzata -->
+            <div class="buttons-section">
+                <input type="file" id="fileInput" accept=".txt" onchange="loadFile()">
+                <button class="btn btn-file" onclick="document.getElementById('fileInput').click()">
+                    📂 Carica File
+                </button>
+                <button class="btn" onclick="processRecords()" id="processBtn">
+                    ⚙️ Elabora Record
+                </button>
+                <button class="btn btn-clear" onclick="clearAll()">
+                    🗑️ Pulisci Tutto
+                </button>
+            </div>
+
+            <div class="progress-section hidden" id="progressSection">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Preparazione...</div>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div class="stats hidden" id="statsSection">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalRecords">0</div>
+                    <div class="stat-label">Record Totali</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="validRecords">0</div>
+                    <div class="stat-label">Record Validi</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="invalidRecords">0</div>
+                    <div class="stat-label">Record Invalidi</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="processingTime">0</div>
+                    <div class="stat-label">Tempo (ms)</div>
+                </div>
+            </div>
+
+            <div class="table-container hidden" id="resultsSection">
+                <h3>📊 Risultati Ordinati Cronologicamente</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>N°</th>
+                            <th>Codice Atto</th>
+                            <th>Nome</th>
+                            <th>Data Morte</th>
+                            <th>Ora Morte</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="download-section hidden" id="downloadSection">
+                <h4>📥 Download File Elaborato</h4>
+                <p>Scarica i record validi ordinati cronologicamente</p>
+                <button class="btn btn-success" onclick="downloadResults()">
+                    ⬇️ Scarica TXT Ordinato
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let processedRecords = [];
+
+        function showAlert(type, message) {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000);
+        }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+
+        function showProgress(show) {
+            const section = document.getElementById('progressSection');
+            section.classList.toggle('hidden', !show);
+        }
+
+        // Funzione loadFile semplificata
+        function loadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showAlert('warning', 'Nessun file selezionato');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('contentInput').value = e.target.result;
+                showAlert('success', 'File caricato con successo! Clicca "Elabora Record" per continuare.');
+            };
+            reader.onerror = function() {
+                showAlert('error', 'Errore nella lettura del file');
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parseRecord(line) {
+            const record = {
+                original: line,
+                codiceAtto: '',
+                nome: '',
+                dataMorte: '',
+                oraMorte: '',
+                isValid: false,
+                dateTime: null
+            };
+
+            try {
+                // 1. Codice Atto con parsing migliorato
+                const bracketPos = line.indexOf('[');
+                if (bracketPos > 0) {
+                    let rawCodiceAtto = line.substring(0, bracketPos).trim();
+                    
+                    // Controlla se è nel formato "Id: 2025-203602-976-056059"
+                    if (rawCodiceAtto.startsWith('Id:')) {
+                        const idPart = rawCodiceAtto.replace('Id:', '').trim();
+                        const segments = idPart.split('-');
+                        
+                        // Se ha almeno 3 segmenti, prendi il terzo (indice 2)
+                        if (segments.length >= 3) {
+                            record.codiceAtto = segments[2];
+                        } else {
+                            // Fallback: usa tutto il codice se non ha il formato atteso
+                            record.codiceAtto = rawCodiceAtto;
+                        }
+                    } else {
+                        // Per altri formati (es: "2025 n.150 p.I uff.1"), mantieni invariato
+                        record.codiceAtto = rawCodiceAtto;
+                    }
+                }
+
+                // 2. Nome: trova ']' poi prendi tutto fino a 'nato il' o 'nata il'
+                const closeBracketPos = line.indexOf(']');
+                if (closeBracketPos > 0) {
+                    const afterBracket = line.substring(closeBracketPos + 1);
+                    
+                    // Cerca 'nato il' o 'nata il'
+                    let natoPos = afterBracket.indexOf(' nato il');
+                    let nataPos = afterBracket.indexOf(' nata il');
+                    
+                    let nameEndPos = -1;
+                    if (natoPos > 0 && nataPos > 0) {
+                        nameEndPos = Math.min(natoPos, nataPos);
+                    } else if (natoPos > 0) {
+                        nameEndPos = natoPos;
+                    } else if (nataPos > 0) {
+                        nameEndPos = nataPos;
+                    }
+                    
+                    if (nameEndPos > 0) {
+                        record.nome = afterBracket.substring(0, nameEndPos).trim();
+                    }
+                }
+
+                // 3. Data Morte: trova 'Data Morte:' e prendi fino a 'Ore'
+                const dataMortePos = line.indexOf('Data Morte:');
+                if (dataMortePos >= 0) {
+                    const afterDataMorte = line.substring(dataMortePos + 'Data Morte:'.length);
+                    const orePos = afterDataMorte.indexOf(' Ore');
+                    
+                    if (orePos > 0) {
+                        record.dataMorte = afterDataMorte.substring(0, orePos).trim();
+                    }
+                }
+
+                // 4. Ora Morte: trova 'Ore ' e prendi i caratteri numerici/due punti successivi
+                const oreSpacePos = line.indexOf('Ore ');
+                if (oreSpacePos >= 0) {
+                    const afterOre = line.substring(oreSpacePos + 'Ore '.length);
+                    
+                    // Prendi solo caratteri che sono numeri, due punti o punti
+                    let oraStr = '';
+                    for (let i = 0; i < afterOre.length; i++) {
+                        const char = afterOre[i];
+                        if (/[0-9:.]/.test(char)) {
+                            oraStr += char;
+                        } else {
+                            break; // Fermati al primo carattere non valido
+                        }
+                    }
+                    record.oraMorte = oraStr;
+                }
+
+                // Validazione: tutti i campi devono essere presenti
+                if (record.codiceAtto && record.nome && record.dataMorte && record.oraMorte) {
+                    record.dateTime = parseDateTime(record.dataMorte, record.oraMorte);
+                    record.isValid = record.dateTime !== null;
+                }
+
+            } catch (error) {
+                console.warn('Errore parsing record:', error);
+            }
+
+            return record;
+        }
+
+        function parseDateTime(dateStr, timeStr) {
+            try {
+                // Pulisci le stringhe
+                dateStr = dateStr.replace(/[^\d\-\/\.]/g, '');
+                timeStr = timeStr.replace(/[^\d:\.]/g, '');
+
+                // Parse data (formato dd-mm-yyyy o dd/mm/yyyy)
+                let dateParts = dateStr.split(/[\-\/\.]/);
+                if (dateParts.length !== 3) return null;
+
+                const day = parseInt(dateParts[0]);
+                const month = parseInt(dateParts[1]) - 1; // JavaScript months are 0-based
+                const year = parseInt(dateParts[2]);
+
+                // Parse ora (formato hh:mm)
+                let timeParts = timeStr.split(/[:\.]/);
+                if (timeParts.length < 2) return null;
+
+                const hour = parseInt(timeParts[0]);
+                const minute = parseInt(timeParts[1]);
+
+                // Validazione base
+                if (isNaN(day) || isNaN(month) || isNaN(year) || isNaN(hour) || isNaN(minute)) {
+                    return null;
+                }
+
+                return new Date(year, month, day, hour, minute);
+
+            } catch (error) {
+                console.warn('Errore conversione data/ora:', error);
+                return null;
+            }
+        }
+
+        function processRecords() {
+            const content = document.getElementById('contentInput').value.trim();
+            
+            if (!content) {
+                showAlert('warning', 'Incolla del contenuto o carica un file prima di elaborare');
+                return;
+            }
+
+            const startTime = performance.now();
+            
+            showProgress(true);
+            updateProgress(0, 'Inizializzazione...');
+
+            // Reset risultati precedenti
+            processedRecords = [];
+            document.getElementById('statsSection').classList.add('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('downloadSection').classList.add('hidden');
+
+            // Split in righe e filtra solo quelle con "Data Morte"
+            const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
+            const deathRecords = lines.filter(line => line.includes('Data Morte'));
+
+            updateProgress(20, 'Parsing record...');
+
+            let validCount = 0;
+            let invalidCount = 0;
+
+            // Processa ogni record
+            deathRecords.forEach((line, index) => {
+                const record = parseRecord(line);
+                processedRecords.push(record);
+                
+                if (record.isValid) {
+                    validCount++;
+                } else {
+                    invalidCount++;
+                }
+
+                // Aggiorna progress bar
+                const progress = 20 + (index / deathRecords.length) * 60;
+                updateProgress(progress, `Elaborando record ${index + 1}/${deathRecords.length}...`);
+            });
+
+            updateProgress(80, 'Ordinamento cronologico...');
+
+            // Ordina per data/ora (record validi prima)
+            processedRecords.sort((a, b) => {
+                if (a.isValid && b.isValid) {
+                    return a.dateTime - b.dateTime;
+                }
+                if (a.isValid) return -1;
+                if (b.isValid) return 1;
+                return 0;
+            });
+
+            updateProgress(90, 'Generazione tabella...');
+
+            // Aggiorna statistiche
+            const processingTime = Math.round(performance.now() - startTime);
+            document.getElementById('totalRecords').textContent = deathRecords.length;
+            document.getElementById('validRecords').textContent = validCount;
+            document.getElementById('invalidRecords').textContent = invalidCount;
+            document.getElementById('processingTime').textContent = processingTime;
+
+            // Genera tabella risultati
+            displayResults();
+
+            updateProgress(100, 'Completato!');
+
+            setTimeout(() => {
+                showProgress(false);
+                document.getElementById('statsSection').classList.remove('hidden');
+                document.getElementById('resultsSection').classList.remove('hidden');
+                if (validCount > 0) {
+                    document.getElementById('downloadSection').classList.remove('hidden');
+                }
+                
+                showAlert('success', `Elaborazione completata! ${validCount} record validi trovati su ${deathRecords.length} totali.`);
+            }, 1000);
+        }
+
+        function displayResults() {
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+
+            processedRecords.forEach((record, index) => {
+                const row = document.createElement('tr');
+                if (!record.isValid) {
+                    row.classList.add('invalid-row');
+                }
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${record.codiceAtto || '❌'}</td>
+                    <td>${record.nome || '❌'}</td>
+                    <td>${record.dataMorte || '❌'}</td>
+                    <td>${record.oraMorte || '❌'}</td>
+                    <td>${record.isValid ? '✅ Valido' : '❌ Invalido'}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function downloadResults() {
+            const validRecords = processedRecords.filter(record => record.isValid);
+            
+            if (validRecords.length === 0) {
+                showAlert('warning', 'Nessun record valido da scaricare');
+                return;
+            }
+
+            const content = validRecords.map(record => 
+                `${record.codiceAtto}\t${record.nome}\t${record.dataMorte}\t${record.oraMorte}`
+            ).join('\n');
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'decessi-ordinati.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            URL.revokeObjectURL(url);
+            
+            showAlert('success', `File scaricato con ${validRecords.length} record validi!`);
+        }
+
+        function clearAll() {
+            document.getElementById('contentInput').value = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('alertContainer').innerHTML = '';
+            document.getElementById('statsSection').classList.add('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('downloadSection').classList.add('hidden');
+            showProgress(false);
+            processedRecords = [];
+            
+            showAlert('success', 'Tutto cancellato, pronto per una nuova elaborazione');
+        }
+    </script>
+</body>
+</html>

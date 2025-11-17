@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elaboratore Dati Mortalità</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+        
+        .date-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .date-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        input[type="date"] {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="date"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .day-label {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .textarea-section {
+            margin-bottom: 30px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-section {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-generate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-clear {
+            background: #e0e0e0;
+            color: #333;
+        }
+        
+        .btn-clear:hover {
+            background: #d0d0d0;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
+        .info-box p {
+            margin: 5px 0;
+            color: #1565c0;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .date-section {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 22px;
+            }
+            
+            .button-section {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Elaboratore Dati Mortalità - Comune di Viterbo</h1>
+        
+        <div class="info-box">
+            <p><strong>Istruzioni:</strong></p>
+            <p>1. Seleziona il periodo di registrazione (la data fine si imposterà automaticamente a +6 giorni)</p>
+            <p>2. Incolla i dati nella casella di testo sottostante</p>
+            <p>3. Clicca su "Genera Excel" per scaricare il file</p>
+        </div>
+        
+        <div class="date-section">
+            <div class="date-group">
+                <label for="dataInizio">Data Inizio Periodo:</label>
+                <input type="date" id="dataInizio" required>
+                <div class="day-label" id="dayInizio"></div>
+            </div>
+            <div class="date-group">
+                <label for="dataFine">Data Fine Periodo:</label>
+                <input type="date" id="dataFine" required>
+                <div class="day-label" id="dayFine"></div>
+            </div>
+        </div>
+        
+        <div class="textarea-section">
+            <label for="inputData">Incolla qui i dati da elaborare:</label>
+            <textarea id="inputData" placeholder="Incolla qui le righe di dati separati da tab..."></textarea>
+        </div>
+        
+        <div class="button-section">
+            <button class="btn-generate" onclick="generaExcel()">📥 Genera Excel</button>
+            <button class="btn-clear" onclick="pulisci()">🗑️ Pulisci</button>
+        </div>
+    </div>
+    
+    <script>
+        // Funzione per ottenere le prime 3 lettere del giorno della settimana
+        function getGiornoSettimana(data) {
+            const giorni = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+            return giorni[data.getDay()];
+        }
+        
+        // Imposta data fine automaticamente a +6 giorni quando cambia data inizio
+        document.getElementById('dataInizio').addEventListener('change', function() {
+            const dataInizio = new Date(this.value + 'T00:00:00');
+            if (!isNaN(dataInizio.getTime())) {
+                const dataFine = new Date(dataInizio);
+                dataFine.setDate(dataFine.getDate() + 6);
+                
+                // Formatta la data per il campo input (YYYY-MM-DD)
+                const anno = dataFine.getFullYear();
+                const mese = String(dataFine.getMonth() + 1).padStart(2, '0');
+                const giorno = String(dataFine.getDate()).padStart(2, '0');
+                document.getElementById('dataFine').value = `${anno}-${mese}-${giorno}`;
+                
+                // Mostra il giorno della settimana
+                document.getElementById('dayInizio').textContent = getGiornoSettimana(dataInizio);
+                document.getElementById('dayFine').textContent = getGiornoSettimana(dataFine);
+            }
+        });
+        
+        // Mostra giorno settimana anche quando cambia data fine manualmente
+        document.getElementById('dataFine').addEventListener('change', function() {
+            const dataFine = new Date(this.value + 'T00:00:00');
+            if (!isNaN(dataFine.getTime())) {
+                document.getElementById('dayFine').textContent = getGiornoSettimana(dataFine);
+            }
+        });
+        
+        function parseData(dataStr) {
+            // Formato: DD-MM-YYYY
+            const parts = dataStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[0]}/${parts[1]}/${parts[2]}`;
+            }
+            return dataStr;
+        }
+        
+        async function generaExcel() {
+            const dataInizio = document.getElementById('dataInizio').value;
+            const dataFine = document.getElementById('dataFine').value;
+            const inputData = document.getElementById('inputData').value.trim();
+            
+            if (!dataInizio || !dataFine) {
+                alert('Seleziona le date del periodo di registrazione');
+                return;
+            }
+            
+            if (!inputData) {
+                alert('Incolla i dati da elaborare');
+                return;
+            }
+            
+            // Formatta le date per l'intestazione
+            const dataInizioFormatted = new Date(dataInizio).toLocaleDateString('it-IT');
+            const dataFineFormatted = new Date(dataFine).toLocaleDateString('it-IT');
+            
+            // Parse dei dati in input
+            const righe = inputData.split('\n').filter(r => r.trim());
+            const datiElaborati = [];
+            
+            righe.forEach(riga => {
+                const campi = riga.split('\t');
+                if (campi.length >= 14) {
+                    const parteSerie = campi[2].trim();
+                    const sesso = campi[5].trim();
+                    const dataNascita = parseData(campi[6].trim());
+                    const luogoNascita = campi[7].trim();
+                    const dataRegMorte = parseData(campi[12].trim());
+                    const dataMorte = parseData(campi[11].trim());
+                    
+                    // Determina luogo decesso: 2 se contiene "II B", altrimenti 1
+                    const luogoDecesso = parteSerie.includes('II B') ? 2 : 1;
+                    
+                    datiElaborati.push([
+                        dataRegMorte,
+                        sesso,
+                        dataNascita,
+                        dataMorte,
+                        luogoNascita,
+                        '',
+                        luogoDecesso
+                    ]);
+                }
+            });
+            
+            if (datiElaborati.length === 0) {
+                alert('Nessun dato valido trovato');
+                return;
+            }
+            
+            // Crea il workbook con ExcelJS
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Mortalità');
+            
+            // Imposta orientamento orizzontale e margini
+            worksheet.pageSetup = {
+                paperSize: 9, // A4
+                orientation: 'landscape',
+                margins: {
+                    left: 0.6 / 2.54,
+                    right: 0.6 / 2.54,
+                    top: 0.6 / 2.54,
+                    bottom: 0.6 / 2.54,
+                    header: 0,
+                    footer: 0
+                }
+            };
+            
+            // Aggiungi le intestazioni
+            worksheet.mergeCells('A1:G1');
+            worksheet.getCell('A1').value = 'UFFICIO DI STATO CIVILE DEL COMUNE DI VITERBO';
+            worksheet.getCell('A1').font = { name: 'Lucida Console', size: 10.5, bold: true };
+            worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'center' };
+            
+            worksheet.mergeCells('A2:G2');
+            worksheet.getCell('A2').value = "MODULO DI RILEVAZIONE DELLA MORTALITA' DEI RESIDENTI NEL COMUNE DI VITERBO";
+            worksheet.getCell('A2').font = { name: 'Lucida Console', size: 10.5, bold: true };
+            worksheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'center' };
+            
+            worksheet.mergeCells('A3:G3');
+            worksheet.getCell('A3').value = `PERIODO REGISTRAZIONE DAL ${dataInizioFormatted} AL ${dataFineFormatted}`;
+            worksheet.getCell('A3').font = { name: 'Lucida Console', size: 10.5, bold: true };
+            worksheet.getCell('A3').alignment = { horizontal: 'center', vertical: 'center' };
+            
+            // Aggiungi riga vuota
+            worksheet.addRow([]);
+            
+            // Aggiungi intestazioni colonne
+            const headerRow = worksheet.addRow([
+                'DATA REGISTRAZIONE',
+                'SESSO',
+                'DATA NASCITA',
+                'DATA DECESSO',
+                'COMUNE NASCITA',
+                'CAUSA VIOLENTA',
+                'LUOGO DECESSO'
+            ]);
+            
+            // Stile per le intestazioni colonne
+            headerRow.eachCell((cell) => {
+                cell.font = { name: 'Lucida Console', size: 10.5, bold: true };
+                cell.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            });
+            
+            // Aggiungi i dati
+            datiElaborati.forEach(row => {
+                const dataRow = worksheet.addRow(row);
+                dataRow.eachCell((cell) => {
+                    cell.font = { name: 'Lucida Console', size: 10.5 };
+                    cell.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+            });
+            
+            // Imposta larghezza colonne
+            worksheet.getColumn(1).width = 18;   // DATA REGISTRAZIONE
+            worksheet.getColumn(2).width = 8;    // SESSO
+            worksheet.getColumn(3).width = 14;      // DATA NASCITA
+            worksheet.getColumn(4).width = 14;      // DATA DECESSO
+            worksheet.getColumn(5).width = 65;   // COMUNE NASCITA
+            worksheet.getColumn(6).width = 12;      // CAUSA VIOLENTA
+            worksheet.getColumn(7).width = 10;    // LUOGO DECESSO
+            
+            // Genera e scarica il file
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Mortalita_Viterbo_${dataInizioFormatted.replace(/\//g, '-')}_${dataFineFormatted.replace(/\//g, '-')}.xlsx`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        function pulisci() {
+            document.getElementById('dataInizio').value = '';
+            document.getElementById('dataFine').value = '';
+            document.getElementById('inputData').value = '';
+        }
+    </script>
+</body>
+</html>
