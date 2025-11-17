@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estrattore Numeri Protocollo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 900px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-extract {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-extract:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-copy {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-copy:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn-clear {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-clear:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(244, 67, 54, 0.3);
+        }
+        
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .stats.show {
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .alert.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Estrattore Numeri Protocollo</h1>
+        <div class="subtitle">Estrae numeri di protocollo dal formato: A - ANNO - NUMERO</div>
+        
+        <div id="alert" class="alert"></div>
+        
+        <div class="grid">
+            <div class="input-group">
+                <label for="inputText">📋 Testo di Input (incolla qui il testo dal gestionale)</label>
+                <textarea 
+                    id="inputText" 
+                    placeholder="Incolla qui il testo contenente i protocolli...&#10;&#10;Esempio:&#10;A - 2025 - 123320&#10;..."
+                ></textarea>
+            </div>
+            
+            <div class="input-group">
+                <label for="outputText">📝 Numeri Protocollo Estratti</label>
+                <textarea 
+                    id="outputText" 
+                    placeholder="I numeri di protocollo estratti appariranno qui..."
+                    readonly
+                ></textarea>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button class="btn-extract" onclick="estraiProtocolli()">
+                🔎 Estrai Protocolli
+            </button>
+            <button class="btn-copy" onclick="copiaRisultati()">
+                📋 Copia Risultati
+            </button>
+            <button class="btn-clear" onclick="pulisciTutto()">
+                🗑️ Pulisci Tutto
+            </button>
+        </div>
+        
+        <div id="stats" class="stats">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalProtocols">0</div>
+                    <div class="stat-label">Protocolli Trovati</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="uniqueYears">-</div>
+                    <div class="stat-label">Anni Diversi</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="minProtocol">-</div>
+                    <div class="stat-label">Protocollo Min</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="maxProtocol">-</div>
+                    <div class="stat-label">Protocollo Max</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function mostraAlert(messaggio, tipo) {
+            const alert = document.getElementById('alert');
+            alert.className = `alert ${tipo}`;
+            alert.textContent = messaggio;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+        
+        function estraiProtocolli() {
+            const inputText = document.getElementById('inputText').value;
+            const outputTextarea = document.getElementById('outputText');
+            
+            if (!inputText.trim()) {
+                mostraAlert('⚠️ Inserisci del testo da analizzare!', 'warning');
+                return;
+            }
+            
+            // Pattern regex per catturare "A - ANNO - NUMERO"
+            // A\s*-\s* = "A" seguito da spazi opzionali, trattino, spazi opzionali
+            // (\d{4})\s*-\s* = 4 cifre per l'anno (gruppo 1), seguito da spazi, trattino, spazi
+            // (\d+) = una o più cifre per il numero protocollo (gruppo 2)
+            const regex = /A\s*-\s*(\d{4})\s*-\s*(\d+)/gi;
+            
+            const protocolli = [];
+            const anniSet = new Set();
+            const numeriProtocollo = [];
+            let match;
+            
+            while ((match = regex.exec(inputText)) !== null) {
+                const anno = match[1];
+                const numeroProtocollo = match[2];
+                
+                protocolli.push(numeroProtocollo);
+                anniSet.add(anno);
+                numeriProtocollo.push(parseInt(numeroProtocollo));
+            }
+            
+            if (protocolli.length === 0) {
+                mostraAlert('❌ Nessun protocollo trovato nel formato "A - ANNO - NUMERO"', 'info');
+                outputTextarea.value = '';
+                document.getElementById('stats').classList.remove('show');
+                return;
+            }
+            
+            // Rimuovi duplicati mantenendo l'ordine
+            const protocolliUnici = [...new Set(protocolli)];
+            
+            // Mostra i risultati
+            outputTextarea.value = protocolliUnici.join('\n');
+            
+            // Aggiorna statistiche
+            document.getElementById('totalProtocols').textContent = protocolliUnici.length;
+            document.getElementById('uniqueYears').textContent = anniSet.size > 0 ? 
+                Array.from(anniSet).sort().join(', ') : '-';
+            
+            if (numeriProtocollo.length > 0) {
+                document.getElementById('minProtocol').textContent = Math.min(...numeriProtocollo);
+                document.getElementById('maxProtocol').textContent = Math.max(...numeriProtocollo);
+            } else {
+                document.getElementById('minProtocol').textContent = '-';
+                document.getElementById('maxProtocol').textContent = '-';
+            }
+            
+            document.getElementById('stats').classList.add('show');
+            
+            mostraAlert(`✅ Estratti ${protocolliUnici.length} protocolli unici!`, 'success');
+        }
+        
+        function copiaRisultati() {
+            const outputText = document.getElementById('outputText');
+            
+            if (!outputText.value.trim()) {
+                mostraAlert('⚠️ Nessun risultato da copiare!', 'warning');
+                return;
+            }
+            
+            outputText.select();
+            outputText.setSelectionRange(0, 99999); // Per dispositivi mobili
+            
+            try {
+                document.execCommand('copy');
+                mostraAlert('✅ Risultati copiati negli appunti!', 'success');
+            } catch (err) {
+                // Fallback per browser moderni
+                navigator.clipboard.writeText(outputText.value).then(() => {
+                    mostraAlert('✅ Risultati copiati negli appunti!', 'success');
+                }).catch(() => {
+                    mostraAlert('❌ Errore nella copia. Seleziona e copia manualmente.', 'warning');
+                });
+            }
+        }
+        
+        function pulisciTutto() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('outputText').value = '';
+            document.getElementById('stats').classList.remove('show');
+            mostraAlert('🗑️ Campi puliti!', 'info');
+        }
+        
+        // Gestione tasto Enter per estrarre
+        document.getElementById('inputText').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                estraiProtocolli();
+            }
+        });
+        
+        // Auto-resize delle textarea
+        document.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 500) + 'px';
+            });
+        });
+    </script>
+</body>
+</html>
