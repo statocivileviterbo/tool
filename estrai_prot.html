@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estrattore Numeri Protocollo</title>
+    <title>Estrattore Numeri Protocollo e Date</title>
     <style>
         * {
             margin: 0;
@@ -215,8 +215,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>🔍 Estrattore Numeri Protocollo</h1>
-        <div class="subtitle">Estrae numeri di protocollo dal formato: A - ANNO - NUMERO</div>
+        <h1>🔍 Estrattore Protocolli e Date</h1>
+        <div class="subtitle">Estrae i protocolli e le relative date pronti per il copia-incolla su Google Sheets</div>
         
         <div id="alert" class="alert"></div>
         
@@ -225,15 +225,15 @@
                 <label for="inputText">📋 Testo di Input (incolla qui il testo dal gestionale)</label>
                 <textarea 
                     id="inputText" 
-                    placeholder="Incolla qui il testo contenente i protocolli...&#10;&#10;Esempio:&#10;A - 2025 - 123320&#10;..."
+                    placeholder="Incolla qui il testo contenente i protocolli...&#10;&#10;Esempio:&#10;A - 2025 - 123320&#10;13-11-2025 - 15:23:09..."
                 ></textarea>
             </div>
             
             <div class="input-group">
-                <label for="outputText">📝 Numeri Protocollo Estratti</label>
+                <label for="outputText">📝 Risultati Pronti per Google Sheets (Protocollo | Data)</label>
                 <textarea 
                     id="outputText" 
-                    placeholder="I numeri di protocollo estratti appariranno qui..."
+                    placeholder="I dati estratti appariranno qui divisi in due colonne..."
                     readonly
                 ></textarea>
             </div>
@@ -241,7 +241,7 @@
         
         <div class="button-group">
             <button class="btn-extract" onclick="estraiProtocolli()">
-                🔎 Estrai Protocolli
+                🔎 Estrai Dati
             </button>
             <button class="btn-copy" onclick="copiaRisultati()">
                 📋 Copia Risultati
@@ -279,7 +279,6 @@
             alert.className = `alert ${tipo}`;
             alert.textContent = messaggio;
             alert.style.display = 'block';
-            
             setTimeout(() => {
                 alert.style.display = 'none';
             }, 3000);
@@ -294,13 +293,12 @@
                 return;
             }
             
-            // Pattern regex per catturare "A - ANNO - NUMERO"
-            // A\s*-\s* = "A" seguito da spazi opzionali, trattino, spazi opzionali
-            // (\d{4})\s*-\s* = 4 cifre per l'anno (gruppo 1), seguito da spazi, trattino, spazi
-            // (\d+) = una o più cifre per il numero protocollo (gruppo 2)
-            const regex = /A\s*-\s*(\d{4})\s*-\s*(\d+)/gi;
+            // Nuova Regex: Cattura l'anno (G1), il numero di protocollo (G2), 
+            // va a capo gestendo qualsiasi spazio/invio (\s+) e cattura la data GG-MM-AAAA (G3)
+            const regex = /A\s*-\s*(\d{4})\s*-\s*(\d+)\s+(\d{2}-\d{2}-\d{4})/gi;
             
-            const protocolli = [];
+            const righeOutput = [];
+            const protocolliSet = new Set(); // Per evitare duplicati di protocollo
             const anniSet = new Set();
             const numeriProtocollo = [];
             let match;
@@ -308,30 +306,33 @@
             while ((match = regex.exec(inputText)) !== null) {
                 const anno = match[1];
                 const numeroProtocollo = match[2];
+                const dataProtocollo = match[3];
                 
-                protocolli.push(numeroProtocollo);
-                anniSet.add(anno);
-                numeriProtocollo.push(parseInt(numeroProtocollo));
+                // Filtro univocità basato sul numero di protocollo
+                if (!protocolliSet.has(numeroProtocollo)) {
+                    protocolliSet.add(numeroProtocollo);
+                    // \t inserisce una tabulazione: fondamentale per separare in colonne su Excel/Sheets
+                    righeOutput.push(`${numeroProtocollo}\t${dataProtocollo}`);
+                    anniSet.add(anno);
+                    numeriProtocollo.push(parseInt(numeroProtocollo));
+                }
             }
             
-            if (protocolli.length === 0) {
-                mostraAlert('❌ Nessun protocollo trovato nel formato "A - ANNO - NUMERO"', 'info');
+            if (righeOutput.length === 0) {
+                mostraAlert('❌ Nessun protocollo trovato nel formato atteso.', 'info');
                 outputTextarea.value = '';
                 document.getElementById('stats').classList.remove('show');
                 return;
             }
             
-            // Rimuovi duplicati mantenendo l'ordine
-            const protocolliUnici = [...new Set(protocolli)];
-            
-            // Mostra i risultati
-            outputTextarea.value = protocolliUnici.join('\n');
+            // Mostra i risultati formattati per le tabelle
+            outputTextarea.value = righeOutput.join('\n');
             
             // Aggiorna statistiche
-            document.getElementById('totalProtocols').textContent = protocolliUnici.length;
+            document.getElementById('totalProtocols').textContent = protocolliSet.size;
             document.getElementById('uniqueYears').textContent = anniSet.size > 0 ? 
                 Array.from(anniSet).sort().join(', ') : '-';
-            
+                
             if (numeriProtocollo.length > 0) {
                 document.getElementById('minProtocol').textContent = Math.min(...numeriProtocollo);
                 document.getElementById('maxProtocol').textContent = Math.max(...numeriProtocollo);
@@ -341,28 +342,25 @@
             }
             
             document.getElementById('stats').classList.add('show');
-            
-            mostraAlert(`✅ Estratti ${protocolliUnici.length} protocolli unici!`, 'success');
+            mostraAlert(`✅ Estratti ${protocolliSet.size} protocolli unici con relative date!`, 'success');
         }
         
         function copiaRisultati() {
             const outputText = document.getElementById('outputText');
-            
             if (!outputText.value.trim()) {
                 mostraAlert('⚠️ Nessun risultato da copiare!', 'warning');
                 return;
             }
             
             outputText.select();
-            outputText.setSelectionRange(0, 99999); // Per dispositivi mobili
+            outputText.setSelectionRange(0, 99999); 
             
             try {
                 document.execCommand('copy');
-                mostraAlert('✅ Risultati copiati negli appunti!', 'success');
+                mostraAlert('✅ Risultati copiati! Incollali direttamente su Google Sheets.', 'success');
             } catch (err) {
-                // Fallback per browser moderni
                 navigator.clipboard.writeText(outputText.value).then(() => {
-                    mostraAlert('✅ Risultati copiati negli appunti!', 'success');
+                    mostraAlert('✅ Risultati copiati! Incollali direttamente su Google Sheets.', 'success');
                 }).catch(() => {
                     mostraAlert('❌ Errore nella copia. Seleziona e copia manualmente.', 'warning');
                 });
@@ -376,14 +374,12 @@
             mostraAlert('🗑️ Campi puliti!', 'info');
         }
         
-        // Gestione tasto Enter per estrarre
         document.getElementById('inputText').addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 'Enter') {
                 estraiProtocolli();
             }
         });
         
-        // Auto-resize delle textarea
         document.querySelectorAll('textarea').forEach(textarea => {
             textarea.addEventListener('input', function() {
                 this.style.height = 'auto';
