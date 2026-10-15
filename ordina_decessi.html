@@ -18,7 +18,6 @@
             padding: 20px;
         }
 
-        /* Container completamente adattivo */
         .container {
             width: calc(100% - 40px);
             margin: 0 auto;
@@ -50,7 +49,6 @@
             padding: 30px;
         }
 
-        /* Sezione input semplificata - solo textarea */
         .input-section {
             margin-bottom: 30px;
         }
@@ -66,7 +64,6 @@
             color: #2c3e50;
         }
 
-        /* Textarea perfettamente adattiva con font più piccolo */
         #contentInput {
             width: 100%;
             height: 300px;
@@ -86,12 +83,10 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        /* Input file nascosto */
         #fileInput {
             display: none;
         }
 
-        /* Sezione pulsanti centralizzata */
         .buttons-section {
             text-align: center;
             margin: 30px 0;
@@ -249,6 +244,11 @@
             margin-top: 20px;
         }
 
+        .download-section p {
+            margin: 6px 0 4px;
+            color: #555;
+        }
+
         .alert {
             padding: 15px;
             border-radius: 8px;
@@ -278,82 +278,27 @@
             display: none;
         }
 
-        /* Responsività migliorata con margini ridotti su mobile */
         @media (max-width: 768px) {
-            body {
-                padding: 15px;
-            }
-
-            .container {
-                width: calc(100% - 30px);
-            }
-
-            .content {
-                padding: 20px;
-            }
-
-            .header {
-                padding: 20px;
-            }
-
-            .header h1 {
-                font-size: 1.8rem;
-            }
-
-            .stats {
-                grid-template-columns: 1fr 1fr;
-            }
-            
-            table {
-                font-size: 0.9rem;
-            }
-
-            .btn {
-                margin: 5px;
-                padding: 10px 20px;
-                font-size: 0.9rem;
-            }
-
-            .buttons-section {
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
+            body { padding: 15px; }
+            .container { width: calc(100% - 30px); }
+            .content { padding: 20px; }
+            .header { padding: 20px; }
+            .header h1 { font-size: 1.8rem; }
+            .stats { grid-template-columns: 1fr 1fr; }
+            table { font-size: 0.9rem; }
+            .btn { margin: 5px; padding: 10px 20px; font-size: 0.9rem; }
+            .buttons-section { display: flex; flex-wrap: wrap; justify-content: center; }
         }
 
         @media (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-
-            .container {
-                width: calc(100% - 20px);
-            }
-
-            .content {
-                padding: 15px;
-            }
-
-            .header {
-                padding: 15px;
-            }
-
-            .header h1 {
-                font-size: 1.6rem;
-            }
-
-            .btn {
-                width: 100%;
-                margin: 5px 0;
-            }
-
-            .buttons-section {
-                display: block;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-            }
+            body { padding: 10px; }
+            .container { width: calc(100% - 20px); }
+            .content { padding: 15px; }
+            .header { padding: 15px; }
+            .header h1 { font-size: 1.6rem; }
+            .btn { width: 100%; margin: 5px 0; }
+            .buttons-section { display: block; }
+            .stats { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -365,7 +310,6 @@
         </div>
 
         <div class="content">
-            <!-- Sezione input semplificata - solo textarea -->
             <div class="input-section">
                 <div class="textarea-container">
                     <label for="contentInput">📝 Incolla qui i record da elaborare:</label>
@@ -377,7 +321,6 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
                 </div>
             </div>
 
-            <!-- Sezione pulsanti centralizzata -->
             <div class="buttons-section">
                 <input type="file" id="fileInput" accept=".txt" onchange="loadFile()">
                 <button class="btn btn-file" onclick="document.getElementById('fileInput').click()">
@@ -439,16 +382,251 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
 
             <div class="download-section hidden" id="downloadSection">
                 <h4>📥 Download File Elaborato</h4>
-                <p>Scarica i record validi ordinati cronologicamente</p>
+                <p>Scarica i record validi ordinati cronologicamente in Excel,<br>con una riga vuota alta ogni 10 record per facilitare la lettura</p>
                 <button class="btn btn-success" onclick="downloadResults()">
-                    ⬇️ Scarica TXT Ordinato
+                    ⬇️ Scarica Excel Ordinato
                 </button>
             </div>
         </div>
     </div>
 
     <script>
+        // =====================================================================
+        // IMPOSTAZIONI EXCEL (modificabili)
+        // =====================================================================
+        const IMPOSTAZIONI_EXCEL = {
+            righePerBlocco: 10,       // ogni quante righe inserire la riga vuota
+            altezzaRigaVuota: 30,     // altezza della riga vuota (punti; normale = 15)
+            nomeFoglio: 'Decessi',
+            nomeFile: 'decessi-ordinati.xlsx'
+        };
+
+        // =====================================================================
+        // INIZIO GENERATORE XLSX INTEGRATO
+        // Nessuna libreria esterna: crea il file .xlsx (uno zip di file XML)
+        // direttamente nel browser. Funziona anche offline.
+        // =====================================================================
+        const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+        const CRC_TABLE = (() => {
+            const t = new Uint32Array(256);
+            for (let n = 0; n < 256; n++) {
+                let c = n;
+                for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                t[n] = c >>> 0;
+            }
+            return t;
+        })();
+
+        function crc32(bytes) {
+            let c = 0xFFFFFFFF;
+            for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+            return (c ^ 0xFFFFFFFF) >>> 0;
+        }
+
+        // Crea un archivio ZIP non compresso (metodo "store") da una lista di file di testo
+        function creaZip(files) {
+            const enc = new TextEncoder();
+            const now = new Date();
+            const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+            const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+
+            const parti = [];
+            const centrale = [];
+            let offset = 0;
+
+            files.forEach(f => {
+                const nome = enc.encode(f.name);
+                const dati = enc.encode(f.data);
+                const crc = crc32(dati);
+
+                const lh = new DataView(new ArrayBuffer(30));
+                lh.setUint32(0, 0x04034b50, true);
+                lh.setUint16(4, 20, true);
+                lh.setUint16(6, 0x0800, true);
+                lh.setUint16(8, 0, true);
+                lh.setUint16(10, dosTime, true);
+                lh.setUint16(12, dosDate, true);
+                lh.setUint32(14, crc, true);
+                lh.setUint32(18, dati.length, true);
+                lh.setUint32(22, dati.length, true);
+                lh.setUint16(26, nome.length, true);
+                lh.setUint16(28, 0, true);
+                parti.push(new Uint8Array(lh.buffer), nome, dati);
+
+                const cd = new DataView(new ArrayBuffer(46));
+                cd.setUint32(0, 0x02014b50, true);
+                cd.setUint16(4, 20, true);
+                cd.setUint16(6, 20, true);
+                cd.setUint16(8, 0x0800, true);
+                cd.setUint16(10, 0, true);
+                cd.setUint16(12, dosTime, true);
+                cd.setUint16(14, dosDate, true);
+                cd.setUint32(16, crc, true);
+                cd.setUint32(20, dati.length, true);
+                cd.setUint32(24, dati.length, true);
+                cd.setUint16(28, nome.length, true);
+                cd.setUint16(30, 0, true);
+                cd.setUint16(32, 0, true);
+                cd.setUint16(34, 0, true);
+                cd.setUint16(36, 0, true);
+                cd.setUint32(38, 0, true);
+                cd.setUint32(42, offset, true);
+                centrale.push(new Uint8Array(cd.buffer), nome);
+
+                offset += 30 + nome.length + dati.length;
+            });
+
+            const dimCentrale = centrale.reduce((s, a) => s + a.length, 0);
+            const fine = new DataView(new ArrayBuffer(22));
+            fine.setUint32(0, 0x06054b50, true);
+            fine.setUint16(4, 0, true);
+            fine.setUint16(6, 0, true);
+            fine.setUint16(8, files.length, true);
+            fine.setUint16(10, files.length, true);
+            fine.setUint32(12, dimCentrale, true);
+            fine.setUint32(16, offset, true);
+            fine.setUint16(20, 0, true);
+
+            return new Blob([...parti, ...centrale, new Uint8Array(fine.buffer)], { type: XLSX_MIME });
+        }
+
+        function escapeXml(s) {
+            return String(s)
+                .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+        }
+
+        function cellaTesto(ref, testo, stile) {
+            return `<c r="${ref}" t="inlineStr" s="${stile}"><is><t xml:space="preserve">${escapeXml(testo)}</t></is></c>`;
+        }
+
+        function cellaNumero(ref, numero, stile) {
+            return `<c r="${ref}" s="${stile}"><v>${numero}</v></c>`;
+        }
+
+        // Converte una data JS nel numero seriale usato da Excel (giorni dal 30-12-1899)
+        function serialeData(dt) {
+            return (Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()) - Date.UTC(1899, 11, 30)) / 86400000;
+        }
+
+        function serialeOra(dt) {
+            return (dt.getHours() * 60 + dt.getMinutes()) / 1440;
+        }
+
+        // Indici stile (vedi styles.xml): 1 intestazione, 2 testo, 3 data, 4 ora, 5 numero centrato, 6 testo centrato
+        function creaFoglioXml(records, opz) {
+            const righe = [];
+            const intestazioni = ['N°', 'Codice Atto', 'Nome', 'Data Morte', 'Ora Morte'];
+            const lettere = ['A', 'B', 'C', 'D', 'E'];
+
+            righe.push(`<row r="1" ht="32" customHeight="1">` +
+                intestazioni.map((h, i) => cellaTesto(lettere[i] + '1', h, 1)).join('') + `</row>`);
+
+            let r = 2;
+            records.forEach((rec, idx) => {
+                // Riga vuota alta ogni N record (non prima del primo)
+                if (idx > 0 && idx % opz.righePerBlocco === 0) {
+                    righe.push(`<row r="${r}" ht="${opz.altezzaRigaVuota}" customHeight="1"/>`);
+                    r++;
+                }
+                const dt = rec.dateTime;
+                righe.push(`<row r="${r}">` +
+                    cellaNumero(`A${r}`, idx + 1, 5) +
+                    cellaTesto(`B${r}`, rec.codiceAtto, 6) +
+                    cellaTesto(`C${r}`, rec.nome, 2) +
+                    cellaNumero(`D${r}`, serialeData(dt), 3) +
+                    cellaNumero(`E${r}`, serialeOra(dt), 4) +
+                    `</row>`);
+                r++;
+            });
+
+            const larghezzaNome = Math.min(60, Math.max(22, ...records.map(x => x.nome.length + 4)));
+            const larghezzaCodice = 10; // codice atto: massimo 5 caratteri
+
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheetViews><sheetView workbookViewId="0" tabSelected="1"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+<sheetFormatPr defaultRowHeight="15"/>
+<cols>
+<col min="1" max="1" width="7" customWidth="1"/>
+<col min="2" max="2" width="${larghezzaCodice}" customWidth="1"/>
+<col min="3" max="3" width="${larghezzaNome}" customWidth="1"/>
+<col min="4" max="4" width="14" customWidth="1"/>
+<col min="5" max="5" width="11" customWidth="1"/>
+</cols>
+<sheetData>${righe.join('')}</sheetData>
+<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>
+</worksheet>`;
+        }
+
+        function creaFileXlsx(records, opz) {
+            const nomeFoglio = escapeXml(opz.nomeFoglio);
+            const files = [
+                { name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>` },
+                { name: '_rels/.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>` },
+                { name: 'xl/workbook.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="${nomeFoglio}" sheetId="1" r:id="rId1"/></sheets>
+<definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'${nomeFoglio}'!$1:$1</definedName></definedNames>
+</workbook>` },
+                { name: 'xl/_rels/workbook.xml.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>` },
+                { name: 'xl/styles.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="2"><numFmt numFmtId="164" formatCode="dd\\-mm\\-yyyy"/><numFmt numFmtId="165" formatCode="hh:mm"/></numFmts>
+<fonts count="2">
+<font><sz val="11"/><name val="Arial"/><family val="2"/></font>
+<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/><family val="2"/></font>
+</fonts>
+<fills count="3">
+<fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF2C3E50"/><bgColor indexed="64"/></patternFill></fill>
+</fills>
+<borders count="2">
+<border><left/><right/><top/><bottom/><diagonal/></border>
+<border><left/><right/><top/><bottom style="thin"><color rgb="FFD9D9D9"/></bottom><diagonal/></border>
+</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="7">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>` },
+                { name: 'xl/worksheets/sheet1.xml', data: creaFoglioXml(records, opz) }
+            ];
+            return creaZip(files);
+        }
+        // =====================================================================
+        // FINE GENERATORE XLSX INTEGRATO
+        // =====================================================================
+
         let processedRecords = [];
+
+        function escapeHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
 
         function showAlert(type, message) {
             const container = document.getElementById('alertContainer');
@@ -466,11 +644,10 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
             section.classList.toggle('hidden', !show);
         }
 
-        // Funzione loadFile semplificata
         function loadFile() {
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
-            
+
             if (!file) {
                 showAlert('warning', 'Nessun file selezionato');
                 return;
@@ -499,38 +676,31 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
             };
 
             try {
-                // 1. Codice Atto con parsing migliorato
+                // 1. Codice Atto
                 const bracketPos = line.indexOf('[');
                 if (bracketPos > 0) {
                     let rawCodiceAtto = line.substring(0, bracketPos).trim();
-                    
-                    // Controlla se è nel formato "Id: 2025-203602-976-056059"
+
                     if (rawCodiceAtto.startsWith('Id:')) {
                         const idPart = rawCodiceAtto.replace('Id:', '').trim();
                         const segments = idPart.split('-');
-                        
-                        // Se ha almeno 3 segmenti, prendi il terzo (indice 2)
                         if (segments.length >= 3) {
                             record.codiceAtto = segments[2];
                         } else {
-                            // Fallback: usa tutto il codice se non ha il formato atteso
                             record.codiceAtto = rawCodiceAtto;
                         }
                     } else {
-                        // Per altri formati (es: "2025 n.150 p.I uff.1"), mantieni invariato
                         record.codiceAtto = rawCodiceAtto;
                     }
                 }
 
-                // 2. Nome: trova ']' poi prendi tutto fino a 'nato il' o 'nata il'
+                // 2. Nome
                 const closeBracketPos = line.indexOf(']');
                 if (closeBracketPos > 0) {
                     const afterBracket = line.substring(closeBracketPos + 1);
-                    
-                    // Cerca 'nato il' o 'nata il'
                     let natoPos = afterBracket.indexOf(' nato il');
                     let nataPos = afterBracket.indexOf(' nata il');
-                    
+
                     let nameEndPos = -1;
                     if (natoPos > 0 && nataPos > 0) {
                         nameEndPos = Math.min(natoPos, nataPos);
@@ -539,42 +709,38 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
                     } else if (nataPos > 0) {
                         nameEndPos = nataPos;
                     }
-                    
+
                     if (nameEndPos > 0) {
                         record.nome = afterBracket.substring(0, nameEndPos).trim();
                     }
                 }
 
-                // 3. Data Morte: trova 'Data Morte:' e prendi fino a 'Ore'
+                // 3. Data Morte
                 const dataMortePos = line.indexOf('Data Morte:');
                 if (dataMortePos >= 0) {
                     const afterDataMorte = line.substring(dataMortePos + 'Data Morte:'.length);
                     const orePos = afterDataMorte.indexOf(' Ore');
-                    
                     if (orePos > 0) {
                         record.dataMorte = afterDataMorte.substring(0, orePos).trim();
                     }
                 }
 
-                // 4. Ora Morte: trova 'Ore ' e prendi i caratteri numerici/due punti successivi
+                // 4. Ora Morte
                 const oreSpacePos = line.indexOf('Ore ');
                 if (oreSpacePos >= 0) {
                     const afterOre = line.substring(oreSpacePos + 'Ore '.length);
-                    
-                    // Prendi solo caratteri che sono numeri, due punti o punti
                     let oraStr = '';
                     for (let i = 0; i < afterOre.length; i++) {
                         const char = afterOre[i];
                         if (/[0-9:.]/.test(char)) {
                             oraStr += char;
                         } else {
-                            break; // Fermati al primo carattere non valido
+                            break;
                         }
                     }
                     record.oraMorte = oraStr;
                 }
 
-                // Validazione: tutti i campi devono essere presenti
                 if (record.codiceAtto && record.nome && record.dataMorte && record.oraMorte) {
                     record.dateTime = parseDateTime(record.dataMorte, record.oraMorte);
                     record.isValid = record.dateTime !== null;
@@ -589,26 +755,22 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
 
         function parseDateTime(dateStr, timeStr) {
             try {
-                // Pulisci le stringhe
                 dateStr = dateStr.replace(/[^\d\-\/\.]/g, '');
                 timeStr = timeStr.replace(/[^\d:\.]/g, '');
 
-                // Parse data (formato dd-mm-yyyy o dd/mm/yyyy)
                 let dateParts = dateStr.split(/[\-\/\.]/);
                 if (dateParts.length !== 3) return null;
 
                 const day = parseInt(dateParts[0]);
-                const month = parseInt(dateParts[1]) - 1; // JavaScript months are 0-based
+                const month = parseInt(dateParts[1]) - 1;
                 const year = parseInt(dateParts[2]);
 
-                // Parse ora (formato hh:mm)
                 let timeParts = timeStr.split(/[:\.]/);
                 if (timeParts.length < 2) return null;
 
                 const hour = parseInt(timeParts[0]);
                 const minute = parseInt(timeParts[1]);
 
-                // Validazione base
                 if (isNaN(day) || isNaN(month) || isNaN(year) || isNaN(hour) || isNaN(minute)) {
                     return null;
                 }
@@ -623,24 +785,22 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
 
         function processRecords() {
             const content = document.getElementById('contentInput').value.trim();
-            
+
             if (!content) {
                 showAlert('warning', 'Incolla del contenuto o carica un file prima di elaborare');
                 return;
             }
 
             const startTime = performance.now();
-            
+
             showProgress(true);
             updateProgress(0, 'Inizializzazione...');
 
-            // Reset risultati precedenti
             processedRecords = [];
             document.getElementById('statsSection').classList.add('hidden');
             document.getElementById('resultsSection').classList.add('hidden');
             document.getElementById('downloadSection').classList.add('hidden');
 
-            // Split in righe e filtra solo quelle con "Data Morte"
             const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
             const deathRecords = lines.filter(line => line.includes('Data Morte'));
 
@@ -649,25 +809,22 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
             let validCount = 0;
             let invalidCount = 0;
 
-            // Processa ogni record
             deathRecords.forEach((line, index) => {
                 const record = parseRecord(line);
                 processedRecords.push(record);
-                
+
                 if (record.isValid) {
                     validCount++;
                 } else {
                     invalidCount++;
                 }
 
-                // Aggiorna progress bar
                 const progress = 20 + (index / deathRecords.length) * 60;
                 updateProgress(progress, `Elaborando record ${index + 1}/${deathRecords.length}...`);
             });
 
             updateProgress(80, 'Ordinamento cronologico...');
 
-            // Ordina per data/ora (record validi prima)
             processedRecords.sort((a, b) => {
                 if (a.isValid && b.isValid) {
                     return a.dateTime - b.dateTime;
@@ -679,14 +836,12 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
 
             updateProgress(90, 'Generazione tabella...');
 
-            // Aggiorna statistiche
             const processingTime = Math.round(performance.now() - startTime);
             document.getElementById('totalRecords').textContent = deathRecords.length;
             document.getElementById('validRecords').textContent = validCount;
             document.getElementById('invalidRecords').textContent = invalidCount;
             document.getElementById('processingTime').textContent = processingTime;
 
-            // Genera tabella risultati
             displayResults();
 
             updateProgress(100, 'Completato!');
@@ -698,7 +853,7 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
                 if (validCount > 0) {
                     document.getElementById('downloadSection').classList.remove('hidden');
                 }
-                
+
                 showAlert('success', `Elaborazione completata! ${validCount} record validi trovati su ${deathRecords.length} totali.`);
             }, 1000);
         }
@@ -715,10 +870,10 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
 
                 row.innerHTML = `
                     <td>${index + 1}</td>
-                    <td>${record.codiceAtto || '❌'}</td>
-                    <td>${record.nome || '❌'}</td>
-                    <td>${record.dataMorte || '❌'}</td>
-                    <td>${record.oraMorte || '❌'}</td>
+                    <td>${record.codiceAtto ? escapeHtml(record.codiceAtto) : '❌'}</td>
+                    <td>${record.nome ? escapeHtml(record.nome) : '❌'}</td>
+                    <td>${record.dataMorte ? escapeHtml(record.dataMorte) : '❌'}</td>
+                    <td>${record.oraMorte ? escapeHtml(record.oraMorte) : '❌'}</td>
                     <td>${record.isValid ? '✅ Valido' : '❌ Invalido'}</td>
                 `;
 
@@ -728,29 +883,30 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
 
         function downloadResults() {
             const validRecords = processedRecords.filter(record => record.isValid);
-            
+
             if (validRecords.length === 0) {
                 showAlert('warning', 'Nessun record valido da scaricare');
                 return;
             }
 
-            const content = validRecords.map(record => 
-                `${record.codiceAtto}\t${record.nome}\t${record.dataMorte}\t${record.oraMorte}`
-            ).join('\n');
+            try {
+                const blob = creaFileXlsx(validRecords, IMPOSTAZIONI_EXCEL);
+                const url = URL.createObjectURL(blob);
 
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'decessi-ordinati.txt';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            URL.revokeObjectURL(url);
-            
-            showAlert('success', `File scaricato con ${validRecords.length} record validi!`);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = IMPOSTAZIONI_EXCEL.nomeFile;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+                showAlert('success', `File Excel scaricato con ${validRecords.length} record validi!`);
+            } catch (error) {
+                console.error('Errore creazione Excel:', error);
+                showAlert('error', 'Errore durante la creazione del file Excel');
+            }
         }
 
         function clearAll() {
@@ -762,7 +918,7 @@ Id: 2025-203602-976-056059 [61078] ROSSI MARIO nato il 15-03-1930 Data Morte: 12
             document.getElementById('downloadSection').classList.add('hidden');
             showProgress(false);
             processedRecords = [];
-            
+
             showAlert('success', 'Tutto cancellato, pronto per una nuova elaborazione');
         }
     </script>
